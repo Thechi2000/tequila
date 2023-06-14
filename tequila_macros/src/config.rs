@@ -5,22 +5,22 @@ use reqwest::Url;
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct TequilaConfig {
-    organization: String,
-    server: String,
-    domain: String,
-    manager: String,
-    cookies: String, // Could be a bool, but its not documented, so I'm not gonna take this risk
-    support_certificates: String, // Same as above
-    default_languagge: String,
-    attributes: Vec<String>,
-    certificate: String,
+    pub organization: String,
+    pub server: String,
+    pub domain: String,
+    pub manager: String,
+    pub cookies: String, // Could be a bool, but its not documented, so I'm not gonna take this risk
+    pub support_certificates: String, // Same as above
+    pub default_languagge: String,
+    pub attributes: Vec<String>,
+    pub certificate: String,
 }
 
 #[derive(Debug)]
 pub enum ConfigError {
     MissingEntry(String),
     Request(reqwest::Error),
-    Url(url::ParseError)
+    Url(url::ParseError),
 }
 
 impl TequilaConfig {
@@ -35,7 +35,7 @@ impl TequilaConfig {
             }
         }
 
-        let lines = s.split("\n").collect::<Vec<_>>();
+        let lines = s.split('\n').collect::<Vec<_>>();
         Ok(TequilaConfig {
             organization: extract_value(&lines, "Organization")?,
             server: extract_value(&lines, "Server")?,
@@ -53,11 +53,17 @@ impl TequilaConfig {
     }
 
     pub fn fetch(url: String) -> Result<Self, ConfigError> {
+        println!("{url}");
         Self::from_string(
-            reqwest::blocking::get(Url::from_str(url.as_str()).map_err(ConfigError::Url)?.join("/getconfig").map_err(ConfigError::Url)?)
-                .map_err(ConfigError::Request)?
-                .text()
-                .map_err(ConfigError::Request)?,
+            reqwest::blocking::get(
+                Url::from_str(url.as_str())
+                    .map_err(ConfigError::Url)?
+                    .join("getconfig")
+                    .map_err(ConfigError::Url)?,
+            )
+            .map_err(ConfigError::Request)?
+            .text()
+            .map_err(ConfigError::Request)?,
         )
     }
 }
