@@ -58,6 +58,9 @@ fn compare_pathes(pathes: &[(&str, bool)], path: &Path) -> bool {
     })
 }
 
+/// Derives the `FromTequilaAttributes` trait. The fields of type `Option` or `Vec` are considered optional.
+/// 
+/// You may set the key of the value that the field should take using the `#[tequila("key")]` attribute. If no such attribute is present, the key will default to the field's name
 #[proc_macro_error]
 #[proc_macro_derive(FromTequilaAttributes, attributes(tequila))]
 pub fn derive_from_tequila_attributes(ts: TokenStream) -> TokenStream {
