@@ -1,4 +1,5 @@
 use clap::Parser;
+use tequila::TequilaRequest;
 use tequila::FromTequilaAttributes;
 use url::Url;
 
@@ -6,6 +7,7 @@ use url::Url;
 enum Args {
     CreateRequest { return_url: String },
     FetchAttributes { key: String, auth_check: String },
+    Login {return_url: String}
 }
 
 #[derive(FromTequilaAttributes, Debug)]
@@ -27,9 +29,9 @@ async fn main() {
                 "Tequila CLI example".into(),
                 vec!["uniqueid".into(), "username".into()],
                 Vec::new(),
-                String::new(),
-                String::new(),
-                "en".into(),
+                None,
+                None,
+                None
             )
             .await
             .expect("Unable to fetch request key");
@@ -38,6 +40,18 @@ async fn main() {
         },
         Args::FetchAttributes {key, auth_check} => {
             println!("{:#?}", tequila::fetch_attributes::<Attributes>(key,auth_check).await.expect("Could not fetch attributes"))
+        }
+        Args::Login { return_url } => {
+            let mut req = TequilaRequest::<Attributes>::new(Url::parse(&return_url).expect("Invalid url"), "Tequila CLI example".into()).await.expect("Could not create request");
+            println!("Login to https://tequila.epfl.ch/cgi-bin/tequila/auth?requestkey={} and input the auth_check", req.key);
+
+            let mut auth_check = String::new();
+            std::io::stdin().read_line(&mut auth_check).expect("Could not read from stdin");
+
+            req.fetch_attributes(auth_check).await.expect("Could not fetch attributes");
+            let attr = req.attributes.unwrap();
+
+            println!("Hi, {} ({})", attr.username, attr.sciper)
         }
     }
 }

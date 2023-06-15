@@ -53,7 +53,6 @@ impl TequilaConfig {
     }
 
     pub fn fetch(url: String) -> Result<Self, ConfigError> {
-        println!("{url}");
         Self::from_string(
             reqwest::blocking::get(
                 Url::from_str(url.as_str())

@@ -11,6 +11,9 @@ where
     Self: Sized,
 {
     fn from_tequila_attributes(attributes: HashMap<String, String>) -> Result<Self, TequilaError>;
+
+    fn requested_attributes() -> Vec<String>;
+    fn required_attributes() -> Vec<String>;
 }
 
 fn build_hashmap(str: String) -> Result<HashMap<String, String>, TequilaError> {
@@ -63,6 +66,14 @@ impl FromTequilaAttributes for CreateRequestResponse {
                 .clone(),
         })
     }
+
+    fn requested_attributes() -> Vec<String> {
+        vec![]
+    }
+
+    fn required_attributes() -> Vec<String> {
+        vec![]
+    }
 }
 
 struct CreateRequestResponse {
@@ -74,9 +85,9 @@ pub async fn create_request(
     service_name: String,
     request_attributes: Vec<String>,
     wish_attributes: Vec<String>,
-    require: String,
-    allow: String,
-    language: String,
+    require: Option<String>,
+    allow: Option<String>,
+    language: Option<String>,
 ) -> Result<String, TequilaError> {
     Ok(
         send_request::<CreateRequestResponse>("createrequest".into(), {
@@ -92,13 +103,13 @@ pub async fn create_request(
             if !wish_attributes.is_empty() {
                 vec.push(("wish", wish_attributes.join(",")))
             }
-            if !require.is_empty() {
+            if let Some(require) = require {
                 vec.push(("require", require))
             }
-            if !allow.is_empty() {
+            if let Some(allow) = allow {
                 vec.push(("allow", allow))
             }
-            if !language.is_empty() {
+            if let Some(language) = language {
                 vec.push(("language", language))
             }
 
@@ -118,4 +129,38 @@ where
         vec![("key", key), ("auth_check", auth_check)],
     )
     .await
+}
+
+pub struct TequilaRequest<A>
+where
+    A: FromTequilaAttributes,
+{
+    pub key: String,
+    pub attributes: Option<A>,
+}
+
+impl<A> TequilaRequest<A>
+where
+    A: FromTequilaAttributes,
+{
+    pub async fn new(return_url: Url, service_name: String) -> Result<Self, TequilaError> {
+        Ok(Self {
+            key: create_request(
+                return_url,
+                service_name,
+                A::required_attributes(),
+                A::requested_attributes(),
+                None,
+                None,
+                None,
+            )
+            .await?,
+            attributes: None,
+        })
+    }
+
+    pub async fn fetch_attributes(&mut self, auth_check: String) -> Result<(), TequilaError> {
+        self.attributes = Some(fetch_attributes(self.key.clone(), auth_check).await?);
+        Ok(())
+    }
 }

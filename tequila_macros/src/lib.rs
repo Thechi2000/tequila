@@ -160,6 +160,35 @@ pub fn derive_from_tequila_attributes(ts: TokenStream) -> TokenStream {
         return TokenStream::new();
     }
 
+    let requested_attributes = fields
+        .iter()
+        .filter_map(|f| {
+            matches!(f._type, FieldType::Option | FieldType::Vec).then(|| {
+                let f = f.attribute.0.clone();
+                quote! {
+                    #f.into(),
+                }
+            })
+        })
+        .fold(proc_macro2::TokenStream::new(), |mut acc, ts| {
+            acc.extend(ts);
+            acc
+        });
+    let required_attributes = fields
+        .iter()
+        .filter_map(|f| {
+            matches!(f._type, FieldType::Other).then(|| {
+                let f = f.attribute.0.clone();
+                quote! {
+                    #f.into(),
+                }
+            })
+        })
+        .fold(proc_macro2::TokenStream::new(), |mut acc, ts| {
+            acc.extend(ts);
+            acc
+        });
+
     let f = fields.into_iter().enumerate().map(|(i, f)| {
         let Field { name, attribute: (key, _), _type } = f;
         let name = Ident::new(name.unwrap_or_else(|| i.to_string()).as_str(), Span::call_site());
@@ -187,6 +216,14 @@ pub fn derive_from_tequila_attributes(ts: TokenStream) -> TokenStream {
                 Ok(Self {
                     #f
                 })
+            }
+
+            fn requested_attributes() -> Vec<String> {
+                vec![#requested_attributes]
+            }
+
+            fn required_attributes() -> Vec<String> {
+                vec![#required_attributes]
             }
         }
     }.into()
