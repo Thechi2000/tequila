@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, marker::PhantomData};
 
 use url::Url;
 
@@ -14,6 +14,20 @@ where
 
     fn requested_attributes() -> Vec<String>;
     fn required_attributes() -> Vec<String>;
+}
+
+impl FromTequilaAttributes for () {
+    fn from_tequila_attributes(_: HashMap<String, String>) -> Result<Self, TequilaError> {
+        Ok(())
+    }
+
+    fn requested_attributes() -> Vec<String> {
+        vec![]
+    }
+
+    fn required_attributes() -> Vec<String> {
+        vec![]
+    }
 }
 
 fn build_hashmap(str: String) -> Result<HashMap<String, String>, TequilaError> {
@@ -131,20 +145,27 @@ where
     .await
 }
 
-pub struct TequilaRequest<A>
+pub struct TequilaRequest<A, S>
 where
     A: FromTequilaAttributes,
 {
-    pub key: String,
-    pub attributes: Option<A>,
+    key: String,
+    attributes: Option<A>,
+    _state: PhantomData<S>,
 }
 
-impl<A> TequilaRequest<A>
-where
-    A: FromTequilaAttributes,
-{
-    pub async fn new(return_url: Url, service_name: String) -> Result<Self, TequilaError> {
-        Ok(Self {
+pub struct WaitingLogin;
+pub struct LoggedIn;
+
+impl TequilaRequest<(), ()> {
+    pub async fn new<A>(
+        return_url: Url,
+        service_name: String,
+    ) -> Result<TequilaRequest<A, WaitingLogin>, TequilaError>
+    where
+        A: FromTequilaAttributes,
+    {
+        Ok(TequilaRequest {
             key: create_request(
                 return_url,
                 service_name,
@@ -156,11 +177,36 @@ where
             )
             .await?,
             attributes: None,
+            _state: PhantomData,
         })
     }
+}
 
-    pub async fn fetch_attributes(&mut self, auth_check: String) -> Result<(), TequilaError> {
-        self.attributes = Some(fetch_attributes(self.key.clone(), auth_check).await?);
-        Ok(())
+impl<A> TequilaRequest<A, WaitingLogin>
+where
+    A: FromTequilaAttributes,
+{
+    pub fn key(&self) -> &str {
+        &self.key
+    }
+
+    pub async fn fetch_attributes(
+        self,
+        auth_check: String,
+    ) -> Result<TequilaRequest<A, LoggedIn>, TequilaError> {
+        Ok(TequilaRequest {
+            key: self.key.clone(),
+            attributes: Some(fetch_attributes(self.key, auth_check).await?),
+            _state: PhantomData::<LoggedIn>,
+        })
+    }
+}
+
+impl<A> TequilaRequest<A, LoggedIn>
+where
+    A: FromTequilaAttributes,
+{
+    pub fn attributes(&self) -> &A {
+        self.attributes.as_ref().unwrap()
     }
 }

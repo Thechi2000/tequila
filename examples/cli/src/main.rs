@@ -42,16 +42,15 @@ async fn main() {
             println!("{:#?}", tequila::fetch_attributes::<Attributes>(key,auth_check).await.expect("Could not fetch attributes"))
         }
         Args::Login { return_url } => {
-            let mut req = TequilaRequest::<Attributes>::new(Url::parse(&return_url).expect("Invalid url"), "Tequila CLI example".into()).await.expect("Could not create request");
-            println!("Login to https://tequila.epfl.ch/cgi-bin/tequila/auth?requestkey={} and input the auth_check", req.key);
+            let req = TequilaRequest::new::<Attributes>(Url::parse(&return_url).expect("Invalid url"), "Tequila CLI example".into()).await.expect("Could not create request");
+            println!("Login to https://tequila.epfl.ch/cgi-bin/tequila/auth?requestkey={} and input the auth_check", req.key());
 
             let mut auth_check = String::new();
             std::io::stdin().read_line(&mut auth_check).expect("Could not read from stdin");
 
-            req.fetch_attributes(auth_check).await.expect("Could not fetch attributes");
-            let attr = req.attributes.unwrap();
+            let req = req.fetch_attributes(auth_check).await.expect("Could not fetch attributes");            
 
-            println!("Hi, {} ({})", attr.username, attr.sciper)
+            println!("Hi, {} ({})", req.attributes().username, req.attributes().sciper)
         }
     }
 }
