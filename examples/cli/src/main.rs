@@ -1,6 +1,5 @@
 use clap::Parser;
-use tequila::FromTequilaAttributes;
-use tequila::TequilaRequest;
+use tequila::{FromTequilaAttributes, TequilaRequest, TEQUILA_URL};
 use url::Url;
 
 #[derive(Parser, Debug)]
@@ -36,7 +35,7 @@ async fn main() {
             .await
             .expect("Unable to fetch request key");
             println!("Your request key is: {key}");
-            println!("https://tequila.epfl.ch/cgi-bin/tequila/auth?requestkey={key}")
+            println!("{TEQUILA_URL}/auth?requestkey={key}")
         }
         Args::FetchAttributes { key, auth_check } => {
             println!(
@@ -53,7 +52,10 @@ async fn main() {
             )
             .await
             .expect("Could not create request");
-            println!("Login to https://tequila.epfl.ch/cgi-bin/tequila/auth?requestkey={} and input the auth_check", req.key());
+            println!(
+                "Login to {TEQUILA_URL}/auth?requestkey={} and input the auth_check",
+                req.key()
+            );
 
             let mut auth_check = String::new();
             std::io::stdin()

@@ -20,7 +20,7 @@ use url::Url;
 
 pub use tequila_macros::*;
 
-const TEQUILA_URL: &str = "https://tequila.epfl.ch/cgi-bin/tequila";
+pub const TEQUILA_URL: &str = "https://tequila.epfl.ch/cgi-bin/tequila";
 
 /// This trait allow an object to be constructed from the response of the `fetch_attributes` route. It should be derived with the [FromTequilaAttributes](tequila_macros::FromTequilaAttributes) macro
 pub trait FromTequilaAttributes
@@ -29,8 +29,8 @@ where
 {
     fn from_tequila_attributes(attributes: HashMap<String, String>) -> Result<Self, TequilaError>;
 
+    fn wished_attributes() -> Vec<String>;
     fn requested_attributes() -> Vec<String>;
-    fn required_attributes() -> Vec<String>;
 }
 
 impl FromTequilaAttributes for () {
@@ -38,11 +38,11 @@ impl FromTequilaAttributes for () {
         Ok(())
     }
 
-    fn requested_attributes() -> Vec<String> {
+    fn wished_attributes() -> Vec<String> {
         vec![]
     }
 
-    fn required_attributes() -> Vec<String> {
+    fn requested_attributes() -> Vec<String> {
         vec![]
     }
 }
@@ -70,7 +70,7 @@ pub enum TequilaError {
     /// Network error
     RequestError(reqwest::Error),
     /// The response is missing a required attribute
-    MissingAttribute(String), // TODO use a Vec
+    MissingAttributes(Vec<String>),
 }
 
 /// Send a request to the API
@@ -107,11 +107,11 @@ impl FromTequilaAttributes for CreateRequestResponse {
         })
     }
 
-    fn requested_attributes() -> Vec<String> {
+    fn wished_attributes() -> Vec<String> {
         vec![]
     }
 
-    fn required_attributes() -> Vec<String> {
+    fn requested_attributes() -> Vec<String> {
         vec![]
     }
 }
@@ -212,8 +212,8 @@ impl TequilaRequest<(), ()> {
             key: create_request(
                 return_url,
                 service_name,
-                A::required_attributes(),
                 A::requested_attributes(),
+                A::wished_attributes(),
                 None,
                 None,
                 None,
